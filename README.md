@@ -12,13 +12,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
-
-
 ---
 
 ## 功能
-
-
 
 | 类别 | 覆盖内容 |
 | --- | --- |
@@ -55,8 +51,6 @@ pip install -e .
 ```bash
 uv run code-review scan /path/to/your/project
 ```
-
-> 
 
 ### 通用配置格式
 
@@ -123,7 +117,7 @@ Claude Code 注册：
 claude mcp add code-review --scope user -- uv --directory /absolute/path/to/code-review-mcp run code-review-mcp
 ```
 
-> **Windows 上的两个坑**（详见本文末尾「常见问题」）：`claude mcp add` 不接受 `--` 之后的 flag；
+> **Windows 上的两个坑**：`claude mcp add` 不接受 `--` 之后的 flag；
 > MCP 命令不能是 `.cmd` / `.bat` 文件。
 
 ## 工具一览

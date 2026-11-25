@@ -12,8 +12,6 @@ English | [简体中文](README.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
-
-
 ---
 
 ## Features
@@ -119,8 +117,8 @@ Registering with Claude Code:
 claude mcp add code-review --scope user -- uv --directory /absolute/path/to/code-review-mcp run code-review-mcp
 ```
 
-> **Two gotchas on Windows** (see the FAQ at the end of this document): `claude mcp add` rejects
-> flags after `--`; the MCP command must not be a `.cmd` / `.bat` file.
+> **Two gotchas on Windows**: `claude mcp add` rejects flags after `--`;
+> the MCP command must not be a `.cmd` / `.bat` file.
 
 ## Tools
 

@@ -16,6 +16,9 @@ uv sync --extra dev
 uv run pytest                          # the whole suite
 uv run python scripts/check_rules.py   # rule YAML syntax + id uniqueness
 uv run python scripts/e2e_check.py     # end-to-end over the real stdio protocol
+uv run python scripts/platform_probe.py Linux   # run the suite under a simulated platform
+uv run python scripts/check_format.py  # README formatting (blank lines, stray blocks, tables)
+uv run python scripts/compare_readmes.py        # README.md and README.en.md stay in sync
 uv run code-review scan . --quiet      # the repo must scan itself clean
 ```
 
