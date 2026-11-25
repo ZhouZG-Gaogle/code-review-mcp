@@ -12,22 +12,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
----
 
-## 为什么需要它
-
-AI 写的代码经常顺手把密钥写死、把 `node_modules` 提交进仓库、或者引入一段来源不明的
-`curl … | bash`。本 MCP 让 agent 在**提交前**把这些东西一次性揪出来，并给出可执行的处置建议。
-
-- **本地运行**：不联网、不上传代码，扫描全在本地文件系统完成。
-- **证据脱敏**：密钥原文**永远不会**出现在报告里，只保留首尾几位用于确认类型。
-- **规则外置**：全部检测规则是 YAML，改规则不用改代码。
 
 ---
 
 ## 功能
 
-### 主线一：敏感信息 / 个人信息 / 缓存数据 / 大文件
+
 
 | 类别 | 覆盖内容 |
 | --- | --- |
@@ -35,11 +26,6 @@ AI 写的代码经常顺手把密钥写死、把 `node_modules` 提交进仓库�
 | **个人信息** | 中国大陆手机号、身份证号（带 MOD 11-2 校验）、银行卡号（Luhn 校验）、邮箱、美国 SSN、护照号、居住地址、MAC 地址、内网 IP |
 | **缓存数据** | `__pycache__` / `.pytest_cache` / `node_modules` / `dist` / `build` / `target` 等缓存与构建目录；`*.pyc` / `*.class` / `*.log` / `*.tmp` / `.DS_Store` 等缓存文件；压缩后的单行代码；源码内嵌的大段 Base64 / data URI |
 | **大文件** | 默认 1 MiB 告警、5 MiB 高危；压缩包 / 文档 / 媒体 / 字体 / 模型权重等二进制制品单独提示 |
-
-### 主线二：病毒文件 / 恶意代码
-
-| 类别 | 覆盖内容 |
-| --- | --- |
 | **文件伪装** | 图片扩展名实为 PE 可执行文件；源码文件实为可执行文件；`invoice.pdf.exe` 双扩展名；UPX 加壳；代码文件香农熵异常（混淆 / 加密载荷） |
 | **下载即执行** | 下载内容直接管道给 shell / 解释器；PowerShell 下载后立即执行；Python 下载后直接求值 |
 | **反弹 Shell** | shell 的 `/dev/tcp` 特性；netcat `-e`；Python socket + `pty.spawn`；PowerShell `TCPClient` |
@@ -47,21 +33,6 @@ AI 写的代码经常顺手把密钥写死、把 `node_modules` 提交进仓库�
 | **勒索与窃密** | 加密勒索信文本；SSH 私钥 / 浏览器凭据库 / 钱包文件 / Windows 凭据导出 |
 | **持久化与注入** | 注册表 Run 键、`schtasks /create`、crontab；`CreateRemoteThread`、`WriteProcessMemory`、`VirtualAllocEx` |
 | **EICAR** | 标准杀毒测试样本 |
-
-### 加分项：区分「躺在工作区」和「已进入版本历史」
-
-扫描时若目标是 Git 仓库，工具会读取 `git ls-files` 判断文件**是否真的被提交过**：
-
-| 情况 | 严重级别 |
-| --- | --- |
-| `.env` 只在工作区 | 高危 |
-| `.env` 已被提交 | **严重** + 提示「凭据已进入版本历史」 |
-| 缓存目录未被跟踪 | 低危 |
-| 缓存目录已被提交 | 中危 |
-
-只执行只读 git 命令（`rev-parse` / `ls-files`），不修改仓库状态。
-
----
 
 ## 快速开始
 
@@ -85,34 +56,7 @@ pip install -e .
 uv run code-review scan /path/to/your/project
 ```
 
-### 接入你的 agent
-
-见下一节 [接入各个 Agent / 客户端](#接入各个-agent--客户端)。
-
----
-
-## 接入各个 Agent / 客户端
-
-### 需要为不同 agent 做适配吗？
-
-**不需要。** MCP 是协议层的契约（stdio 或 HTTP 上跑 JSON-RPC），服务端代码对所有客户端是同一份，
-不需要为 Cursor / Claude Code / Cline / Codex 分别改一行代码 —— 这点和 Claude Code 的
-Skills 有本质区别：
-
-|  | Skills | MCP |
-| --- | --- | --- |
-| 形态 | 提示词 / 指令片段，由 agent 读取后照做 | 常驻进程，暴露**可调用的工具** |
-| 绑定程度 | Claude Code 专有（`.claude/skills/`） | 跨客户端标准，任何实现 MCP 的客户端都能用 |
-| 能力 | 只能"指导"，无法真正执行动作 | 真正执行：读文件、算哈希、跑规则、调 Defender |
-
-真正需要"按客户端调整"的只有三处，都**不需要改代码**：
-
-1. **注册命令**——每个客户端的配置文件位置和字段名不同（见下表）；
-2. **传输方式**——本地用 `stdio`，远程 / 只支持 HTTP 的客户端用 `code-review-mcp --transport http`；
-3. **工具描述语言**——本项目的工具描述同时提供中英文，中英文 agent 都能准确选型。
-
-> 另外，本项目**不执行任何被扫描的代码**、**不联网**、**不写入被扫描目录**，
-> 因此把它挂到任何一个有文件读权限的 agent 上都是安全的。
+> 
 
 ### 通用配置格式
 
@@ -159,7 +103,7 @@ Windows 路径建议用正斜杠，或把反斜杠写成 `\\`：
 | **Trae** | `~/.trae/mcp.json` 或 `<项目>/.trae/mcp.json` | `mcpServers` |
 | **Cherry Studio** | 图形界面：设置 → MCP Servers → 添加服务器 | — |
 
-VS Code 的格式不一样，单独给一份：
+VS Code ：
 
 ```json
 {
@@ -173,7 +117,7 @@ VS Code 的格式不一样，单独给一份：
 }
 ```
 
-Claude Code 直接用命令注册最省事：
+Claude Code 注册：
 
 ```bash
 claude mcp add code-review --scope user -- uv --directory /absolute/path/to/code-review-mcp run code-review-mcp
@@ -181,27 +125,6 @@ claude mcp add code-review --scope user -- uv --directory /absolute/path/to/code
 
 > **Windows 上的两个坑**（详见本文末尾「常见问题」）：`claude mcp add` 不接受 `--` 之后的 flag；
 > MCP 命令不能是 `.cmd` / `.bat` 文件。
-
-### HTTP 传输（远程 / 只支持 HTTP 的客户端）
-
-```bash
-uv run code-review-mcp --transport http --host 127.0.0.1 --port 8765
-```
-
-端点为 `http://127.0.0.1:8765/mcp`（streamable-http）。客户端配置：
-
-```json
-{
-  "mcpServers": {
-    "code-review": {
-      "type": "http",
-      "url": "http://127.0.0.1:8765/mcp"
-    }
-  }
-}
-```
-
----
 
 ## 工具一览
 
@@ -308,7 +231,7 @@ uv run code-review rules --category malware
 
 - **只读**：除显式指定的 JSON 报告外不写任何文件；不执行、不导入被扫描的代码。
 - **不联网**：唯一的外部调用是可选的本机 Windows Defender（本地 IPC）。
-- **证据脱敏**：密钥原文永不进报告。
+- **证据脱敏**：屏蔽密钥原文。
 - **子进程切断 stdin**：MCP 的 stdin 是 JSON-RPC 管道，子进程继承它会挂死整条协议流。
 - **仓库自身干净**：不携带活体恶意签名与凭据字面量；测试夹具运行时分行拼接。
 
@@ -316,19 +239,6 @@ uv run code-review rules --category malware
 > 请把本目录加入白名单。
 
 ---
-
-## 开发
-
-```bash
-uv run pytest                          # 全部测试
-uv run python scripts/check_rules.py   # 规则 YAML 语法与 id 唯一性自检
-uv run python scripts/e2e_check.py     # MCP 协议端到端自检（真实 stdio 协议）
-uv run python scripts/platform_probe.py Linux   # 模拟其它平台跑测试
-uv run code-review scan . --quiet      # 用自己的工具扫自己
-```
-
-端到端自检脚本会真的起一个 stdio 服务并逐个调用工具，
-用于确认「协议层能跑通」而不只是「库函数能跑通」。
 
 ### 目录结构
 
@@ -360,48 +270,6 @@ code-review-mcp/
 │   └── raw_probe.py       # 原始 JSON-RPC 探针
 └── tests/
 ```
-
-### 调试
-
-设置 `CODE_REVIEW_MCP_DEBUG=1` 后，扫描各阶段会打到 stderr（不影响 stdout 上的协议流）：
-
-```
-[code-review-mcp +   0.05s] 配置与规则加载完成 (C:\repo)
-[code-review-mcp +   0.05s] 文件遍历完成: 128 个文件
-[code-review-mcp +   0.12s] Git 状态查询完成: available=True
-[code-review-mcp +   0.20s] 扫描完成: 7 条发现
-```
-
----
-
-## 常见问题
-
-**Q：Windows 上 `claude mcp add ... -- uv --directory <path> run code-review-mcp` 报 `unknown option '--directory'`？**
-
-当前版本 `claude mcp add` 会把 `--` 之后的 flag 当成自己的选项。请改用环境变量传参：
-
-```powershell
-claude mcp add code-review --scope user -e UV_PROJECT="C:/path/to/code-review-mcp" -- uv run code-review-mcp
-```
-
-**Q：Windows 上把命令指向 `.cmd` / `.bat` 后连接失败（`CONNECTION_CLOSED`）？**
-
-Node 在 CVE-2024-27980 修复后，`child_process.spawn` 在 `shell: false` 下拒绝启动批处理文件，
-而 MCP 客户端正是这样启动服务进程的。请直接指向真实可执行文件：
-
-```powershell
-claude mcp add code-review --scope user -- "C:\path\to\code-review-mcp\.venv\Scripts\code-review-mcp.exe"
-```
-
-**Q：误报太多 / 漏报？**
-
-先用 `list_rules` 确认规则是否生效，再用 `.code-review-mcp-rules.yaml` 按 id 覆盖
-`severity` 或 `enabled`。占位符类误报（`your-api-key`、`${VAR}`）默认已过滤，
-可用 `report_placeholders: true` 关掉过滤。
-
-**Q：工具会不会把我仓库里的代码传出去？**
-
-不会。全程本地，无网络请求。
 
 ---
 

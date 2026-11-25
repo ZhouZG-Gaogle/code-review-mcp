@@ -2,67 +2,35 @@
 
 English | [简体中文](README.md)
 
-> A **code-review MCP server** for AI coding agents: it finds secrets & personal data,
-> cache artifacts & oversized files, and malicious files & malware behaviour.
+> An MCP server that gives AI coding agents a real code reviewer: secrets & PII, cache & oversized
+> files, malicious files & malware behaviour — all local, all redacted.
 >
-> An MCP server that gives AI coding agents a real code reviewer — all local, all redacted.
+> 一个给 AI 编码 agent 用的**代码审查 MCP 服务**：查敏感信息与个人信息，查缓存数据与大文件，
+> 查病毒文件与恶意代码。
 
 [![CI](https://github.com/ZhouZG-Gaogle/code-review-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhouZG-Gaogle/code-review-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
----
 
-## Why
-
-AI-generated code routinely hardcodes an API key, commits `node_modules`, or pastes in an
-unverified `curl … | bash`. This MCP lets an agent catch all of that **before** the commit,
-and hand back actionable remediation steps.
-
-- **Local only** — no network calls, no uploads; everything happens on the local filesystem.
-- **Redacted output** — the original secret **never** appears in a report; only a few leading
-  and trailing characters survive, enough to tell you which kind of secret it is.
-- **Rules as data** — every detection rule is YAML, so tuning never means editing code.
 
 ---
 
-## What it detects
-
-### Track 1 — secrets, PII, cache artifacts, oversized files
+## Features
 
 | Category | Coverage |
 | --- | --- |
-| **Keys & credentials** | AWS / Google / GitHub / GitLab / Slack / Stripe / OpenAI / Anthropic / HuggingFace / Alibaba Cloud / Tencent Cloud / npm / PyPI / Atlassian / SendGrid / Mailgun keys and tokens; PEM / OpenSSH / PuTTY private keys; JWTs; Basic auth embedded in URLs; plaintext passwords in connection strings; `.npmrc` / `.pypirc` / `.netrc` / `.htpasswd`; cloud service-account JSON; pre-signed URLs; hardcoded `password = "…"` |
-| **Personal data** | CN mobile numbers, national ID numbers (MOD 11-2 checksum), bank card numbers (Luhn checksum), emails, US SSNs, passport numbers, home addresses, MAC addresses, internal IP ranges |
-| **Cache artifacts** | `__pycache__` / `.pytest_cache` / `node_modules` / `dist` / `build` / `target` and friends; `*.pyc` / `*.class` / `*.log` / `*.tmp` / `.DS_Store`; minified single-line bundles; large embedded Base64 / data URIs |
+| **Keys & credentials** | Key and token patterns for AWS / Google / GitHub / GitLab / Slack / Stripe / OpenAI / Anthropic / HuggingFace / Alibaba Cloud / Tencent Cloud / npm / PyPI / Atlassian / SendGrid / Mailgun; PEM / OpenSSH / PuTTY private keys; JWTs; Basic auth embedded in URLs; plaintext passwords in connection strings; `.npmrc` / `.pypirc` / `.netrc` / `.htpasswd`; cloud service-account JSON; pre-signed URLs; hardcoded `password = "…"` |
+| **Personal data** | CN mobile numbers, national ID numbers (MOD 11-2 checksum), bank card numbers (Luhn checksum), emails, US SSNs, passport numbers, home addresses, MAC addresses, internal IPs |
+| **Cache artifacts** | `__pycache__` / `.pytest_cache` / `node_modules` / `dist` / `build` / `target` cache and build directories; `*.pyc` / `*.class` / `*.log` / `*.tmp` / `.DS_Store` cache files; minified single-line bundles; large embedded Base64 / data URIs |
 | **Oversized files** | Warn at 1 MiB, high at 5 MiB by default; archives, documents, media, fonts and model weights get their own hints |
-
-### Track 2 — malicious files & malware behaviour
-
-| Category | Coverage |
-| --- | --- |
 | **File spoofing** | An image extension that is really a PE executable; a source file that is really an executable; `invoice.pdf.exe` double extensions; UPX packing; abnormal code-file entropy (obfuscation / encrypted payload) |
 | **Download-and-execute** | Piping a download straight into a shell or interpreter; PowerShell download-then-run; Python download-then-eval |
 | **Reverse shells** | Shell `/dev/tcp`; netcat `-e`; Python socket + `pty.spawn`; PowerShell `TCPClient` |
 | **Destructive commands** | Recursive deletion of root / system directories (shell, `shutil.rmtree`, PowerShell `Remove-Item`, raw device writes) |
-| **Ransomware & theft** | Ransom-note text; SSH private keys, browser credential stores, wallet files, Windows credential dumping |
+| **Ransomware & theft** | Ransom-note text; SSH private keys / browser credential stores / wallet files / Windows credential dumping |
 | **Persistence & injection** | Registry Run keys, `schtasks /create`, crontab; `CreateRemoteThread`, `WriteProcessMemory`, `VirtualAllocEx` |
 | **EICAR** | The standard anti-malware test sample |
-
-### Bonus: "sitting in the working tree" vs "already in version control"
-
-When the target is a Git repository, the tool reads `git ls-files` and tells the two apart:
-
-| Situation | Severity |
-| --- | --- |
-| `.env` only in the working tree | high |
-| `.env` already committed | **critical**, plus "the credential is now in version history" |
-| Cache directory untracked | low |
-| Cache directory committed | medium |
-
-Only read-only git commands are used (`rev-parse`, `ls-files`); the repository is never modified.
-
----
 
 ## Quick start
 
@@ -85,39 +53,6 @@ pip install -e .
 ```bash
 uv run code-review scan /path/to/your/project
 ```
-
-### Wire it into your agent
-
-See [Connecting to agents and clients](#connecting-to-agents-and-clients).
-
----
-
-## Connecting to agents and clients
-
-### Do I need per-agent adaptation?
-
-**No.** MCP is a protocol-level contract (JSON-RPC over stdio or HTTP), so the *same* server
-binary serves every client — there is no per-client code path, exactly like a portable
-server rather than a Claude-only plugin.
-
-This is worth contrasting with Claude Code's Skills:
-
-|  | Skills | MCP |
-| --- | --- | --- |
-| Shape | Prompt / instruction text the agent reads and follows | A long-running process exposing **callable tools** |
-| Portability | Claude Code specific (`.claude/skills/`) | Client-agnostic standard — any MCP-capable client works |
-| Capability | Can only *advise* | Can actually act: read files, hash them, run rules, invoke Defender |
-
-Only three things differ per client, and none of them require code changes:
-
-1. **Registration** — each client reads a different file and key name (table below).
-2. **Transport** — `stdio` locally, `code-review-mcp --transport http` for remote setups or
-   clients that only speak HTTP.
-3. **Tool description language** — descriptions here are bilingual, so Chinese- and
-   English-speaking agents both pick the right tool.
-
-> The server **never executes scanned code**, **never touches the network**, and **never
-> writes into the scanned directory**, so attaching it to any agent that can read files is safe.
 
 ### Generic config shape
 
@@ -164,7 +99,7 @@ On Windows prefer forward slashes, or escape the backslashes:
 | **Trae** | `~/.trae/mcp.json` or `<project>/.trae/mcp.json` | `mcpServers` |
 | **Cherry Studio** | GUI: Settings → MCP Servers → Add server | — |
 
-VS Code uses a different shape:
+VS Code:
 
 ```json
 {
@@ -178,35 +113,14 @@ VS Code uses a different shape:
 }
 ```
 
-For Claude Code the CLI is easiest:
+Registering with Claude Code:
 
 ```bash
 claude mcp add code-review --scope user -- uv --directory /absolute/path/to/code-review-mcp run code-review-mcp
 ```
 
-> **Two Windows gotchas** (see [FAQ](#faq)): `claude mcp add` rejects flags after `--`, and the
-> MCP command must not be a `.cmd` / `.bat` file.
-
-### HTTP transport (remote setups, HTTP-only clients)
-
-```bash
-uv run code-review-mcp --transport http --host 127.0.0.1 --port 8765
-```
-
-The endpoint is `http://127.0.0.1:8765/mcp` (streamable-http):
-
-```json
-{
-  "mcpServers": {
-    "code-review": {
-      "type": "http",
-      "url": "http://127.0.0.1:8765/mcp"
-    }
-  }
-}
-```
-
----
+> **Two gotchas on Windows** (see the FAQ at the end of this document): `claude mcp add` rejects
+> flags after `--`; the MCP command must not be a `.cmd` / `.bat` file.
 
 ## Tools
 
@@ -221,9 +135,9 @@ The endpoint is `http://127.0.0.1:8765/mcp` (streamable-http):
 | `export_rules(target_dir)` | Export the built-in rules as YAML |
 | `review_status()` | Server configuration and rule inventory |
 
-Useful parameters:
+Common parameters:
 
-- `severity_min` — `critical` / `high` / `medium` / `low` / `info` (default `info`, report everything).
+- `severity_min` — `critical` / `high` / `medium` / `low` / `info`, default `info` (report everything).
 - `output_json_path` — also write a JSON report, handy for CI archiving or dashboards.
 - `use_defender` — `review_malware` / `review_code` can additionally run a local Windows
   Defender custom scan (`-DisableRemediation`: detect only, never quarantine).
@@ -315,7 +229,7 @@ This project is a *scanner*, so it has to be compliant itself. Full details in
 - **Read-only** — writes nothing except an explicitly requested JSON report; never executes or
   imports scanned code.
 - **No network** — the only external call is the optional local Windows Defender (local IPC).
-- **Redacted evidence** — key material never reaches the report.
+- **Redacted evidence** — key material is masked.
 - **Subprocesses get `stdin=DEVNULL`** — the MCP stdin is the JSON-RPC pipe; a child process
   inheriting it deadlocks the whole protocol stream.
 - **The repo itself is clean** — no live malware signatures and no credential literals; test
@@ -325,19 +239,6 @@ This project is a *scanner*, so it has to be compliant itself. Full details in
 > phrases like "reverse shell" and "ransomware"), whitelist the directory.
 
 ---
-
-## Development
-
-```bash
-uv run pytest                          # the whole suite
-uv run python scripts/check_rules.py   # rule YAML syntax + id uniqueness
-uv run python scripts/e2e_check.py     # end-to-end check over the real stdio protocol
-uv run python scripts/platform_probe.py Linux   # run the suite under a simulated platform
-uv run code-review scan . --quiet      # scan this repo with this repo's own tool
-```
-
-The end-to-end script really starts a stdio server and calls every tool, so it proves the
-*protocol* works — not just the library functions.
 
 ### Layout
 
@@ -369,52 +270,6 @@ code-review-mcp/
 │   └── raw_probe.py       # raw JSON-RPC probe
 └── tests/
 ```
-
-### Debugging
-
-Set `CODE_REVIEW_MCP_DEBUG=1` and each scan phase is logged to stderr (stdout stays clean for
-the protocol stream):
-
-```
-[code-review-mcp +   0.05s] 配置与规则加载完成 (C:\repo)
-[code-review-mcp +   0.05s] 文件遍历完成: 128 个文件
-[code-review-mcp +   0.12s] Git 状态查询完成: available=True
-[code-review-mcp +   0.20s] 扫描完成: 7 条发现
-```
-
----
-
-## FAQ
-
-**Q: `claude mcp add ... -- uv --directory <path> run code-review-mcp` fails with
-`unknown option '--directory'` on Windows.**
-
-Current `claude mcp add` treats flags after `--` as its own options. Pass parameters through
-the environment instead:
-
-```powershell
-claude mcp add code-review --scope user -e UV_PROJECT="C:/path/to/code-review-mcp" -- uv run code-review-mcp
-```
-
-**Q: Pointing the command at a `.cmd` / `.bat` gives `CONNECTION_CLOSED` on Windows.**
-
-Since the CVE-2024-27980 fix, Node's `child_process.spawn` refuses to launch batch files when
-`shell: false`, and that is exactly how MCP clients spawn the server. Point at the real
-executable instead:
-
-```powershell
-claude mcp add code-review --scope user -- "C:\path\to\code-review-mcp\.venv\Scripts\code-review-mcp.exe"
-```
-
-**Q: Too many false positives, or missing detections?**
-
-Run `list_rules` to confirm the rules are in effect, then override `severity` or `enabled` per
-rule id in `.code-review-mcp-rules.yaml`. Placeholder-looking values (`your-api-key`, `${VAR}`)
-are filtered out by default; set `report_placeholders: true` to see them anyway.
-
-**Q: Does it send my code anywhere?**
-
-No. Everything runs locally; there are no network requests.
 
 ---
 
