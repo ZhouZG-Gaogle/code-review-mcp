@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 工具产物
+.code-review-mcp.yaml
+report-*.json
+*.log
+.tmp-e2e/
+e2e-out.txt
+e2e-err.txt
+scan.txt

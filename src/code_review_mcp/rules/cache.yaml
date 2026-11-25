@@ -1,0 +1,152 @@
+# 缓存数据 / 构建产物规则（基于路径与文件特征）
+
+# 常见缓存与构建目录名。命中即提示不应提交到版本库。
+dirs:
+  - __pycache__
+  - .pytest_cache
+  - .mypy_cache
+  - .ruff_cache
+  - .cache
+  - .parcel-cache
+  - .turbo
+  - .next
+  - .nuxt
+  - .svelte-kit
+  - .angular
+  - .expo
+  - .dart_tool
+  - .nyc_output
+  - .coverage
+  - coverage
+  - htmlcov
+  - .tox
+  - .nox
+  - .eggs
+  - .ipynb_checkpoints
+  - .terraform
+  - .serverless
+  - .gradle
+  - .vs
+  - obj
+  - bin
+  - build
+  - dist
+  - out
+  - target
+  - Pods
+  - DerivedData
+  - logs
+  - log
+
+# 单个文件特征
+files:
+  - id: cache-python-bytecode
+    pattern: '\.py[co]$'
+    description: Python 编译缓存
+    severity: low
+    recommendation: 加入 .gitignore 并从版本库移除。
+
+  - id: cache-java-class
+    pattern: '\.class$'
+    description: Java 编译产物
+    severity: low
+    recommendation: 由构建流程生成，不应入库。
+
+  - id: cache-native-object
+    pattern: '\.(o|obj|a|lib|so|dylib|pdb)$'
+    description: 编译中间产物
+    severity: low
+    recommendation: 由构建流程生成，不应入库。
+
+  - id: cache-log-file
+    pattern: '\.(log|log\.\d+)$'
+    description: 运行日志
+    severity: low
+    recommendation: 日志不应入库，建议写入日志目录并加入 .gitignore。
+
+  - id: cache-temp-file
+    pattern: '\.(tmp|temp|swp|swo|swn|bak|old|orig|rej)$'
+    description: 临时 / 备份 / 编辑器交换文件
+    severity: low
+    recommendation: 加入 .gitignore。
+
+  - id: cache-editor-backup
+    pattern: '(^|/)[^/]*~$'
+    description: 编辑器备份文件
+    severity: low
+    recommendation: 加入 .gitignore。
+
+  - id: cache-os-junk
+    pattern: '(^|/)(\.DS_Store|Thumbs\.db|desktop\.ini)$'
+    description: 操作系统垃圾文件
+    severity: low
+    recommendation: 加入 .gitignore。
+
+  - id: cache-minified-asset
+    pattern: '\.(min\.(js|css)|bundle\.js)$'
+    description: 压缩 / 打包产物
+    severity: low
+    recommendation: 提交源码即可，构建产物由 CI 生成。
+
+  - id: cache-sourcemap
+    pattern: '\.map$'
+    description: Source Map 文件
+    severity: low
+    recommendation: 确认是否泄露源码结构；一般不入库。
+
+  - id: cache-sql-dump
+    pattern: '\.(sql|dump)$'
+    description: 数据库导出脚本
+    severity: medium
+    min_size: 102400
+    recommendation: 数据库导出不入库，改用迁移脚本。
+
+  - id: cache-local-database
+    pattern: '\.(sqlite|sqlite3|db|mdb|dat|idx)$'
+    description: 本地数据库文件
+    severity: medium
+    recommendation: 本地数据库通常不应入库。
+
+  - id: cache-pickle-numpy
+    pattern: '\.(pkl|pickle|npy|npz|parquet|feather|joblib)$'
+    description: 序列化缓存 / 数据集
+    severity: medium
+    recommendation: 确认是否包含用户数据或超大对象；建议改用制品库分发。
+
+  - id: cache-coverage
+    pattern: '(^|/)\.coverage(\..*)?$'
+    description: 覆盖率数据
+    severity: low
+    recommendation: 加入 .gitignore。
+
+  - id: cache-package-metadata
+    pattern: '\.egg-info(/|$)'
+    description: Python 包元数据
+    severity: low
+    recommendation: 由打包工具生成，不应入库。
+
+  - id: cache-lockfile-artifact
+    pattern: '(^|/)\.yarn/(integrity|cache)/'
+    description: 包管理器缓存
+    severity: low
+    recommendation: 加入 .gitignore。
+
+# 内容特征（可能命中压缩包 / 合并后的缓存数据）
+content:
+  - id: cache-minified-line
+    description: 疑似压缩后的单行代码
+    severity: low
+    recommendation: 提交源码即可，压缩产物由构建流程生成。
+    pattern: '(?m)^[^\n]{3000,}$'
+
+  - id: cache-embedded-blob
+    description: 源码中内嵌的大段二进制 / Base64 数据
+    severity: medium
+    recommendation: 把内嵌数据移到资源文件或制品库，必要时先确认其是否为加密 payload。
+    pattern: '[A-Za-z0-9+/=]{400,}'
+
+  - id: cache-data-uri
+    description: 源码中内嵌的 data URI 二进制
+    severity: medium
+    recommendation: 把内嵌数据移到资源文件或制品库。
+    pattern: 'data:application/(?:octet-stream|x-[a-z\-]+);base64,[A-Za-z0-9+/=]{120,}'
