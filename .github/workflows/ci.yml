@@ -33,7 +33,19 @@ jobs:
         run: uv run python scripts/check_rules.py
 
       - name: Run tests
-        run: uv run pytest -q
+        shell: bash
+        run: |
+          set +e
+          uv run pytest -q --tb=short > pytest-output.txt 2>&1
+          status=$?
+          cat pytest-output.txt
+          {
+            echo "### pytest output"
+            echo '```'
+            cat pytest-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
   self-scan:
     # 用本工程自己的工具扫自己：规则或代码一旦引入活体特征串，这里会红

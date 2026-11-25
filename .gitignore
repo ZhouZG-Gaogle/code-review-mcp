@@ -19,3 +19,4 @@ report-*.json
 e2e-out.txt
 e2e-err.txt
 scan.txt
+pytest-output.txt
