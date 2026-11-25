@@ -42,9 +42,22 @@ def test_powershell_uses_devnull_stdin(monkeypatch):
 def test_defender_scan_uses_devnull_stdin(monkeypatch, tmp_path):
     calls = _capture_run(monkeypatch)
     monkeypatch.setattr(defender, "_find_mpcmdrun", lambda: "MpCmdRun.exe")
-    defender.scan_paths([str(tmp_path)], defender.DefenderConfig())
+    # 注入平台名，才能在非 Windows 上也覆盖到 Windows 分支
+    defender.scan_paths(
+        [str(tmp_path)], defender.DefenderConfig(), platform_name="Windows"
+    )
     assert calls
     assert calls[0]["kwargs"].get("stdin") is subprocess.DEVNULL
+
+
+def test_defender_scan_skipped_on_non_windows(monkeypatch, tmp_path):
+    calls = _capture_run(monkeypatch)
+    detections, notes = defender.scan_paths(
+        [str(tmp_path)], defender.DefenderConfig(), platform_name="Linux"
+    )
+    assert not detections
+    assert notes
+    assert not calls, "非 Windows 平台不应该启动任何子进程"
 
 
 def test_git_helpers_degrade_gracefully(monkeypatch, tmp_path):

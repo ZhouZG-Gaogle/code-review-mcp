@@ -104,10 +104,18 @@ def defender_status() -> dict[str, Any]:
     return status
 
 
-def scan_paths(paths: list[str], cfg: DefenderConfig) -> tuple[list[DefenderDetection], list[str]]:
-    """用 Defender 扫描给定路径，返回 (命中列表, 错误/提示)。"""
+def scan_paths(
+    paths: list[str],
+    cfg: DefenderConfig,
+    *,
+    platform_name: str | None = None,
+) -> tuple[list[DefenderDetection], list[str]]:
+    """用 Defender 扫描给定路径，返回 (命中列表, 错误/提示)。
+
+    ``platform_name`` 仅供测试注入，默认用真实平台；非 Windows 直接跳过。
+    """
     notes: list[str] = []
-    if platform.system() != "Windows":
+    if (platform_name or platform.system()) != "Windows":
         return [], ["非 Windows 平台，跳过 Defender 联动扫描。"]
 
     mpcmdrun = _find_mpcmdrun()

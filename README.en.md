@@ -332,6 +332,7 @@ This project is a *scanner*, so it has to be compliant itself. Full details in
 uv run pytest                          # the whole suite
 uv run python scripts/check_rules.py   # rule YAML syntax + id uniqueness
 uv run python scripts/e2e_check.py     # end-to-end check over the real stdio protocol
+uv run python scripts/platform_probe.py Linux   # run the suite under a simulated platform
 uv run code-review scan . --quiet      # scan this repo with this repo's own tool
 ```
 
@@ -364,6 +365,7 @@ code-review-mcp/
 ├── scripts/
 │   ├── check_rules.py     # rule YAML syntax + id uniqueness check
 │   ├── e2e_check.py       # MCP protocol end-to-end check
+│   ├── platform_probe.py  # run the suite under a simulated platform
 │   └── raw_probe.py       # raw JSON-RPC probe
 └── tests/
 ```

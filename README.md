@@ -323,6 +323,7 @@ uv run code-review rules --category malware
 uv run pytest                          # 全部测试
 uv run python scripts/check_rules.py   # 规则 YAML 语法与 id 唯一性自检
 uv run python scripts/e2e_check.py     # MCP 协议端到端自检（真实 stdio 协议）
+uv run python scripts/platform_probe.py Linux   # 模拟其它平台跑测试
 uv run code-review scan . --quiet      # 用自己的工具扫自己
 ```
 
@@ -355,6 +356,7 @@ code-review-mcp/
 ├── scripts/
 │   ├── check_rules.py     # 规则 YAML 语法与 id 唯一性自检
 │   ├── e2e_check.py       # MCP 协议端到端自检
+│   ├── platform_probe.py  # 模拟其它平台跑测试
 │   └── raw_probe.py       # 原始 JSON-RPC 探针
 └── tests/
 ```
